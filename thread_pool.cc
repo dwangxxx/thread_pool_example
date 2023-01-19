@@ -19,21 +19,19 @@ void* ExecElement::Start(void* arg) {
       // 首先加锁，从任务队列中取任务
       std::unique_lock<std::mutex> unique_lock(exec_element->pool_->mutex_);
       // 条件变量使用，需要 while 循环，不能用 if，否则会出现虚假唤醒的情况
-      while (exec_element->pool_->task_queue_.empty()) {
-        // 如果当前线程不可用，直接退出
-        if (exec_element->terminated_) {
-          break;
-        }
+      while (exec_element->pool_->task_queue_.empty() && !exec_element->terminated_) {
         // 等待任务到达
         exec_element->pool_->cv_.wait(unique_lock);
       }
 
+      // 循环退出有可能是线程池被销毁，并且任务队列中无任务，所以需要判断任务队列是否为空
       if (!exec_element->pool_->task_queue_.empty()) {
         task_element = exec_element->pool_->task_queue_.front();
         exec_element->pool_->task_queue_.pop_front();
       }
     }
 
+    // 取到任务之后，需要判断当前线程是否被退出，如果是则退出
     if (exec_element->terminated_) {
       break;
     }
@@ -62,7 +60,7 @@ void ThreadPool::CreateThreadPool() {
   for (int i = 0; i < thread_count_; ++i) {
     auto exec_element = new ExecElement;
     exec_element->pool_ = const_cast<ThreadPool*>(this);
-    threads_.emplace_back(std::thread(ExecElement::Start, exec_element));
+    exec_element->thread_ = std::thread(ExecElement::Start, exec_element);
     std::cout << "Create thread " << i << " successfully." << std::endl;
     exec_queue_.push_back(exec_element);
   }
@@ -100,11 +98,10 @@ ThreadPool::~ThreadPool() {
 
   // 等待所有子线程安全退出
   for (int i = 0; i < exec_queue_.size(); ++i) {
-    if (threads_[i].joinable()) {
-      threads_[i].join();
+    if (exec_queue_[i]->thread_.joinable()) {
+      exec_queue_[i]->thread_.join();
     }
   }
-  threads_.clear();
 
   // 所有线程均安全退出，清空执行队列
   for (int i = 0; i < exec_queue_.size(); ++i) {

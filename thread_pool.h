@@ -39,6 +39,7 @@ class ExecElement {
   ExecElement() = default;
   ~ExecElement() = default;
 
+  std::thread thread_;
   bool terminated_ = false;
   ThreadPool* pool_;
   static void* Start(void* arg);
@@ -58,8 +59,6 @@ class ThreadPool {
   // 任务队列和执行队列
   std::deque<TaskElement*> task_queue_;
   std::deque<ExecElement*> exec_queue_;
-
-  std::vector<std::thread> threads_;
 
   // 用于任务队列的多线程访问
   std::condition_variable cv_;
