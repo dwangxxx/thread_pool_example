@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "__threading_support": "cpp",
+        "__mutex_base": "cpp",
+        "condition_variable": "cpp",
+        "mutex": "cpp",
+        "atomic": "cpp",
+        "thread": "cpp",
+        "__config": "cpp",
+        "version": "cpp",
+        "memory": "cpp",
+        "vector": "cpp"
+    }
+}
